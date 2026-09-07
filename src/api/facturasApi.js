@@ -60,11 +60,32 @@ function mapearDetalle(data) {
 
 // ---------- Listado / detalle (lectura) ----------
 
-export async function listarFacturas() {
+export async function listarFacturas({
+  buscar,
+  estado,
+  novedades,
+  fechaDesde,
+  fechaHasta,
+} = {}) {
+  const params = {
+    ...(buscar?.trim() ? { buscar: buscar.trim() } : {}),
+    ...(estado ? { estado } : {}),
+    ...(novedades ? { novedades } : {}),
+    ...(fechaDesde ? { fecha_desde: fechaDesde } : {}),
+    ...(fechaHasta ? { fecha_hasta: fechaHasta } : {}),
+  };
+
   try {
-    const { data } = await api.get("/");
-    const facturas = (data.facturas || data).map(mapearFactura);
-    for (const f of facturas) await actualizarCache(f);
+    const { data } = await api.get("/", { params });
+    const registros = Array.isArray(data?.facturas)
+      ? data.facturas
+      : Array.isArray(data)
+        ? data
+        : [];
+    const facturas = registros.map(mapearFactura);
+    await db.facturasCache.bulkPut(
+      facturas.map((factura) => ({ ...factura, actualizado_en: Date.now() }))
+    );
     return facturas;
   } catch (error) {
     if (!esFallaDeRed(error)) throw error;

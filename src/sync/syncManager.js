@@ -25,7 +25,16 @@ async function notificar() {
 async function yaExisteEnServidor(numero_factura, proveedor) {
   try {
     const { data } = await api.get("/");
-    return data.find((f) => f.numero_factura === numero_factura && f.proveedor === proveedor);
+    const facturas = Array.isArray(data?.facturas)
+      ? data.facturas
+      : Array.isArray(data)
+        ? data
+        : [];
+    return facturas.find(
+      (factura) =>
+        (factura.NUMERO_FACTURA ?? factura.numero_factura) === numero_factura &&
+        (factura.PROVEEDOR ?? factura.proveedor) === proveedor
+    );
   } catch {
     return null;
   }

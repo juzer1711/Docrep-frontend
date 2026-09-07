@@ -265,7 +265,7 @@ export default function Login() {
                       value={correo}
                       onChange={(e) => setCorreo(e.target.value)}
                       placeholder="correo@ejemplo.com"
-                      className="min-h-touch w-full bg-transparent px-3 text-sm text-graphite-900 outline-none placeholder:text-graphite-500"
+                      className="min-h-touch w-full bg-transparent px-3 text-sm text-graphite-900 outline-none focus:outline-none placeholder:text-graphite-500"
                     />
                   </div>
                 </div>
@@ -292,7 +292,7 @@ export default function Login() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Ingresa tu contraseña"
-                      className="min-h-touch w-full bg-transparent px-3 text-sm text-graphite-900 outline-none placeholder:text-graphite-500"
+                      className="min-h-touch w-full bg-transparent px-3 text-sm text-graphite-900 outline-none focus:outline-none placeholder:text-graphite-500"
                     />
                   </div>
                 </div>
