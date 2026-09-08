@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="errGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EF4444" />
+      <stop offset="100%" stop-color="#B91C1C" />
+    </linearGradient>
+    <linearGradient id="errBox" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+  </defs>
+
+  <rect width="200" height="200" rx="30" fill="#FEF2F2" />
+
+  <!-- Caja Base Oscura -->
+  <g transform="translate(10, 10)">
+    <path d="M90 35 L145 60 L90 85 L35 60 Z" fill="#334155" />
+    <path d="M35 60 L90 85 L90 140 L35 115 Z" fill="url(#errBox)" />
+    <path d="M90 85 L145 60 L145 115 L90 140 Z" fill="#1E293B" />
+  </g>
+
+  <!-- Escudo de Alerta en Frente -->
+  <g transform="translate(50, 45)">
+    <circle cx="50" cy="50" r="42" fill="#FFFFFF" />
+    <circle cx="50" cy="50" r="36" fill="url(#errGrad)" />
+    <!-- Signo Exclamación / X -->
+    <path d="M50 30 L50 56" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" />
+    <circle cx="50" cy="68" r="4.5" fill="#FFFFFF" />
+  </g>
+</svg>

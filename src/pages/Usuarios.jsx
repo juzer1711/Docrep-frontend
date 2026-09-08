@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api, { mensajeError } from "../services/api.js";
 
-const ROLES = ["BODEGA", "REVISION", "ADMINISTRACION", "ADMINISTRADOR", "CONTABILIDAD"];
+const ROLES = ["BODEGA", "ADMINISTRADOR", "CONTABILIDAD"];
 const vacio = { nombre: "", correo: "", rol: "BODEGA", codigo_pin: "", password: "" };
 function usuarioMap(u) { return { ...u, id: u.ID_USUARIO ?? u.id_usuario, nombre: u.NOMBRE ?? u.nombre, correo: u.CORREO ?? u.correo, rol: u.ROL ?? u.rol, codigo_pin: u.CODIGO_PIN ?? u.codigo_pin, estado: u.ESTADO ?? u.estado }; }
 

@@ -34,11 +34,9 @@ export default defineConfig({
     })
   ],
   server: {
+    allowedHosts: [".ngrok-free.dev"], 
     proxy: {
       "/api": "http://localhost:3000"
-    },
-    allowedHosts: [
-      "disparate-correct-shininess.ngrok-free.dev"
-    ] 
+    }
   }
 });

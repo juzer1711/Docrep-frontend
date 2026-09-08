@@ -1,448 +1,684 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  AlertTriangle,
-  ArrowRight,
-  ClipboardList,
-  FileCheck2,
-  FileClock,
-  PackageCheck,
-  Plus,
-  RefreshCw,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { listarFacturas } from "../api/facturasApi.js";
-import StatusBadge from "../components/StatusBadge.jsx";
-import { useToast } from "../components/ToastProvider.jsx";
-import { useAuth } from "../context/AuthContext.jsx";
+import AddBoxRoundedIcon from "@mui/icons-material/AddBoxRounded";
+import AssignmentTurnedInRoundedIcon from "@mui/icons-material/AssignmentTurnedInRounded";
+import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
+import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded";
+import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
+import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
+import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
+import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
+import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
+import CalendarTodayRoundedIcon from "@mui/icons-material/CalendarTodayRounded";
 
-const ESTADOS = {
+import Skeleton from "@mui/material/Skeleton";
+
+import { listarFacturas } from "../api/facturasApi.js";
+import { useAuth } from "../context/AuthContext.jsx";
+import { useToast } from "../components/ToastProvider.jsx";
+import StatusBadge from "../components/StatusBadge.jsx";
+
+const TARJETAS = {
   RECIBIDA: {
-    label: "Recibidas",
-    icon: PackageCheck,
+    titulo: "Recibidas",
+    descripcion: "Facturas recibidas",
+    Icon: Inventory2RoundedIcon,
   },
+
   EN_REVISION: {
-    label: "En revisión",
-    icon: FileClock,
+    titulo: "En revisión",
+    descripcion: "Pendientes de revisión",
+    Icon: FactCheckRoundedIcon,
   },
-  CON_NOVEDAD: {
-    label: "Con novedades",
-    icon: AlertTriangle,
-  },
+
   ENTREGADA_ADMIN: {
-    label: "Entregadas",
-    icon: FileCheck2,
+    titulo: "Entregadas",
+    descripcion: "Entregadas a administración",
+    Icon: AssignmentTurnedInRoundedIcon,
   },
+
   FINALIZADA: {
-    label: "Finalizadas",
-    icon: ShieldCheck,
+    titulo: "Finalizadas",
+    descripcion: "Proceso completado",
+    Icon: VerifiedRoundedIcon,
+  },
+
+  NOVEDADES: {
+    titulo: "Novedades",
+    descripcion: "Novedades registradas",
+    Icon: WarningAmberRoundedIcon,
   },
 };
 
-function obtenerNombre(usuario) {
-  return usuario?.nombre || usuario?.NOMBRE || "Usuario";
-}
+const ACCIONES_POR_ROL = {
+  BODEGA: [
+    {
+      ruta: "/nueva-recepcion",
+      titulo: "Nueva recepción",
+      descripcion: "Registrar una nueva factura recibida.",
+      Icon: AddBoxRoundedIcon,
+      primaria: true,
+    },
+    {
+      ruta: "/facturas",
+      titulo: "Ver facturas",
+      descripcion: "Consultar y gestionar las facturas.",
+      Icon: ReceiptLongRoundedIcon,
+      primaria: false,
+    },
+  ],
 
-function obtenerRol(usuario) {
-  return usuario?.rol || usuario?.ROL || "";
-}
+  ADMINISTRADOR: [
+    {
+      ruta: "/nueva-recepcion",
+      titulo: "Nueva recepción",
+      descripcion: "Registrar una nueva factura recibida.",
+      Icon: AddBoxRoundedIcon,
+      primaria: true,
+    },
+    {
+      ruta: "/facturas",
+      titulo: "Ver facturas",
+      descripcion: "Consultar y gestionar las facturas.",
+      Icon: ReceiptLongRoundedIcon,
+      primaria: false,
+    },
+    {
+      ruta: "/usuarios",
+      titulo: "Usuarios",
+      descripcion: "Administrar los usuarios del sistema.",
+      Icon: PeopleAltRoundedIcon,
+      primaria: false,
+    },
+  ],
+
+  CONTABILIDAD: [
+    {
+      ruta: "/facturas",
+      titulo: "Ver facturas",
+      descripcion: "Consultar las facturas de la operación.",
+      Icon: ReceiptLongRoundedIcon,
+      primaria: true,
+    },
+  ],
+};
+
+const CLAVES_POR_ROL = {
+  BODEGA: [
+    "RECIBIDA",
+    "EN_REVISION",
+    "ENTREGADA_ADMIN",
+    "NOVEDADES",
+  ],
+
+  ADMINISTRADOR: [
+    "RECIBIDA",
+    "EN_REVISION",
+    "ENTREGADA_ADMIN",
+    "FINALIZADA",
+    "NOVEDADES",
+  ],
+
+  CONTABILIDAD: [
+    "ENTREGADA_ADMIN",
+    "FINALIZADA",
+  ],
+};
 
 function obtenerSaludo() {
   const hora = new Date().getHours();
 
-  if (hora < 12) return "Buenos días";
-  if (hora < 18) return "Buenas tardes";
+  if (hora < 12) {
+    return "Buenos días";
+  }
+
+  if (hora < 19) {
+    return "Buenas tardes";
+  }
+
   return "Buenas noches";
 }
 
-export default function Dashboard() {
-  const [facturas, setFacturas] = useState([]);
-  const [cargando, setCargando] = useState(true);
+function obtenerDescripcionRol(rol) {
+  switch (rol) {
+    case "BODEGA":
+      return "Gestiona las recepciones y el seguimiento de las facturas.";
 
-  const { mostrar } = useToast();
-  const { usuario } = useAuth();
+    case "ADMINISTRADOR":
+      return "Supervisa la operación y administra el sistema.";
 
-  const nombre = obtenerNombre(usuario);
-  const rol = obtenerRol(usuario);
+    case "CONTABILIDAD":
+      return "Consulta las facturas entregadas y finalizadas.";
 
-  const puedeCrear = ["BODEGA", "ADMINISTRADOR", "ADMINISTRACION"].includes(
-    rol
-  );
+    default:
+      return "Consulta el estado actual de la operación.";
+  }
+}
 
-  const esAdmin = rol === "ADMINISTRADOR";
-
-  async function cargar() {
-    setCargando(true);
-
-    try {
-      const data = await listarFacturas();
-      setFacturas(Array.isArray(data) ? data : []);
-    } catch (error) {
-      mostrar("No se pudieron cargar las recepciones.", "error");
-    } finally {
-      setCargando(false);
-    }
+function formatearFecha(fecha) {
+  if (!fecha) {
+    return "Fecha no disponible";
   }
 
-  useEffect(() => {
-    cargar();
-  }, []);
+  const valor = new Date(fecha);
 
-  const resumen = useMemo(() => {
-    return {
-      RECIBIDA: facturas.filter(
-        (factura) => factura.estado_factura === "RECIBIDA"
-      ).length,
+  if (Number.isNaN(valor.getTime())) {
+    return String(fecha);
+  }
 
-      EN_REVISION: facturas.filter(
-        (factura) => factura.estado_factura === "EN_REVISION"
-      ).length,
+  return new Intl.DateTimeFormat("es-CO", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(valor);
+}
 
-      CON_NOVEDAD: facturas.filter(
-        (factura) => factura.estado_factura === "CON_NOVEDAD"
-      ).length,
+function obtenerFechaOrden(fecha) {
+  if (!fecha) {
+    return 0;
+  }
 
-      ENTREGADA_ADMIN: facturas.filter(
-        (factura) => factura.estado_factura === "ENTREGADA_ADMIN"
-      ).length,
+  const valor = new Date(fecha).getTime();
 
-      FINALIZADA: facturas.filter(
-        (factura) => factura.estado_factura === "FINALIZADA"
-      ).length,
-    };
-  }, [facturas]);
+  return Number.isNaN(valor) ? 0 : valor;
+}
 
-  const recientes = useMemo(() => {
-    return [...facturas]
-      .sort((a, b) => {
-        const fechaA = new Date(
-          a.fecha_recepcion || a.fecha_creacion || 0
-        ).getTime();
+function obtenerTextoEstado(estado) {
+  switch (estado) {
+    case "RECIBIDA":
+      return "Recibida";
 
-        const fechaB = new Date(
-          b.fecha_recepcion || b.fecha_creacion || 0
-        ).getTime();
+    case "EN_REVISION":
+      return "En revisión";
 
-        return fechaB - fechaA;
-      })
-      .slice(0, 5);
-  }, [facturas]);
+    case "ENTREGADA_ADMIN":
+      return "Entregada";
 
+    case "FINALIZADA":
+      return "Finalizada";
+
+    default:
+      return estado || "Sin estado";
+  }
+}
+
+function IndicadorSkeleton() {
   return (
-    <div className="mx-auto max-w-5xl px-4 pb-24 pt-6 sm:px-6">
-      {/* =====================================================
-          ENCABEZADO
-          ===================================================== */}
-      <section className="mb-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-sky-600">
-              {obtenerSaludo()}
-            </p>
+    <div className="rounded-xl border border-graphite-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between">
+        <Skeleton variant="rounded" width={40} height={40} />
+        <Skeleton variant="rounded" width={54} height={24} />
+      </div>
 
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-graphite-900 sm:text-3xl">
-              {nombre}
-            </h1>
+      <Skeleton
+        variant="text"
+        width={58}
+        height={42}
+        className="mt-3"
+      />
 
-            <p className="mt-1 text-sm text-graphite-500">
-              Este es el estado actual de tus recepciones.
-            </p>
-          </div>
+      <Skeleton
+        variant="text"
+        width={130}
+        height={24}
+      />
 
-          <button
-            type="button"
-            onClick={cargar}
-            disabled={cargando}
-            aria-label="Actualizar información"
-            className="flex min-h-touch min-w-touch items-center justify-center rounded-xl border border-graphite-200 bg-white text-graphite-700 shadow-sm transition hover:border-sky-500 hover:text-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RefreshCw
-              size={19}
-              className={cargando ? "animate-spin" : ""}
-              aria-hidden="true"
-            />
-          </button>
-        </div>
-
-        <div className="mt-3 inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700">
-          {rol || "Usuario"}
-        </div>
-      </section>
-
-      {/* =====================================================
-          RESUMEN
-          ===================================================== */}
-      {cargando ? (
-        <section
-          aria-label="Cargando resumen"
-          className="grid grid-cols-2 gap-3 lg:grid-cols-4"
-        >
-          {[1, 2, 3, 4].map((item) => (
-            <div
-              key={item}
-              className="h-32 animate-pulse rounded-2xl border border-graphite-200 bg-white"
-            />
-          ))}
-        </section>
-      ) : (
-        <section
-          aria-label="Resumen de recepciones"
-          className="grid grid-cols-2 gap-3 lg:grid-cols-4"
-        >
-          <ResumenCard
-            titulo="Recibidas"
-            cantidad={resumen.RECIBIDA}
-            icon={PackageCheck}
-            color="sky"
-          />
-
-          <ResumenCard
-            titulo="En revisión"
-            cantidad={resumen.EN_REVISION}
-            icon={FileClock}
-            color="blue"
-          />
-
-          <ResumenCard
-            titulo="Novedades"
-            cantidad={resumen.CON_NOVEDAD}
-            icon={AlertTriangle}
-            color="red"
-          />
-
-          <ResumenCard
-            titulo="Finalizadas"
-            cantidad={resumen.FINALIZADA}
-            icon={ShieldCheck}
-            color="green"
-          />
-        </section>
-      )}
-
-      {/* =====================================================
-          ACCIONES RÁPIDAS
-          ===================================================== */}
-      <section className="mt-7">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-graphite-900">
-            Acciones rápidas
-          </h2>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {puedeCrear && (
-            <Link
-              to="/nueva-recepcion"
-              className="group flex min-h-[88px] items-center gap-4 rounded-2xl border border-sky-600 bg-sky-600 p-4 text-white shadow-sm transition hover:bg-sky-700 active:scale-[0.99]"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
-                <Plus size={25} aria-hidden="true" />
-              </div>
-
-              <div className="min-w-0">
-                <p className="font-semibold">Nueva recepción</p>
-                <p className="mt-0.5 text-xs text-blue-100">
-                  Registrar una factura recibida
-                </p>
-              </div>
-
-              <ArrowRight
-                size={19}
-                className="ml-auto shrink-0 transition-transform group-hover:translate-x-1"
-                aria-hidden="true"
-              />
-            </Link>
-          )}
-
-          <Link
-            to="/bitacora"
-            className="group flex min-h-[88px] items-center gap-4 rounded-2xl border border-graphite-200 bg-white p-4 shadow-sm transition hover:border-sky-300 hover:bg-sky-50 active:scale-[0.99]"
-          >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
-              <ClipboardList size={23} aria-hidden="true" />
-            </div>
-
-            <div className="min-w-0">
-              <p className="font-semibold text-graphite-900">
-                Ver bitácora
-              </p>
-              <p className="mt-0.5 text-xs text-graphite-500">
-                Buscar y consultar facturas
-              </p>
-            </div>
-
-            <ArrowRight
-              size={19}
-              className="ml-auto shrink-0 text-graphite-400 transition-transform group-hover:translate-x-1"
-              aria-hidden="true"
-            />
-          </Link>
-
-          {esAdmin && (
-            <Link
-              to="/usuarios"
-              className="group flex min-h-[88px] items-center gap-4 rounded-2xl border border-graphite-200 bg-white p-4 shadow-sm transition hover:border-sky-300 hover:bg-sky-50 active:scale-[0.99]"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
-                <Users size={23} aria-hidden="true" />
-              </div>
-
-              <div className="min-w-0">
-                <p className="font-semibold text-graphite-900">
-                  Usuarios
-                </p>
-                <p className="mt-0.5 text-xs text-graphite-500">
-                  Administrar accesos y roles
-                </p>
-              </div>
-
-              <ArrowRight
-                size={19}
-                className="ml-auto shrink-0 text-graphite-400 transition-transform group-hover:translate-x-1"
-                aria-hidden="true"
-              />
-            </Link>
-          )}
-        </div>
-      </section>
-
-      {/* =====================================================
-          RECEPCIONES RECIENTES
-          ===================================================== */}
-      <section className="mt-7">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-graphite-900">
-              Recepciones recientes
-            </h2>
-
-            <p className="mt-0.5 text-xs text-graphite-500">
-              Últimos documentos registrados
-            </p>
-          </div>
-
-          {facturas.length > 5 && (
-            <Link
-              to="/bitacora"
-              className="text-sm font-semibold text-sky-600 hover:text-sky-700"
-            >
-              Ver todas
-            </Link>
-          )}
-        </div>
-
-        {cargando ? (
-          <div className="rounded-2xl border border-graphite-200 bg-white p-8 text-center text-sm text-graphite-500">
-            Cargando recepciones…
-          </div>
-        ) : recientes.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-graphite-200 bg-white p-10 text-center">
-            <PackageCheck
-              size={36}
-              className="mx-auto text-graphite-300"
-              aria-hidden="true"
-            />
-
-            <p className="mt-3 font-medium text-graphite-700">
-              Todavía no hay recepciones
-            </p>
-
-            <p className="mt-1 text-sm text-graphite-500">
-              Las facturas registradas aparecerán aquí.
-            </p>
-
-            {puedeCrear && (
-              <Link
-                to="/nueva-recepcion"
-                className="mt-5 inline-flex min-h-touch items-center rounded-xl bg-sky-600 px-5 font-semibold text-white hover:bg-sky-700"
-              >
-                Registrar recepción
-              </Link>
-            )}
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-2xl border border-graphite-200 bg-white shadow-sm">
-            <div className="divide-y divide-graphite-200">
-              {recientes.map((factura) => (
-                <Link
-                  key={factura.id}
-                  to={`/facturas/${factura.id}`}
-                  className="group flex min-h-[76px] items-center gap-3 px-4 py-3 transition hover:bg-paper-50 active:bg-paper-100 sm:px-5"
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
-                    <PackageCheck size={19} aria-hidden="true" />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-graphite-900">
-                      {factura.numero_factura || "Sin número"}
-                    </p>
-
-                    <p className="mt-0.5 truncate text-sm text-graphite-500">
-                      {factura.proveedor || "Proveedor no registrado"}
-                    </p>
-                  </div>
-
-                  <div className="hidden shrink-0 sm:block">
-                    <StatusBadge estado={factura.estado_factura} />
-                  </div>
-
-                  <ArrowRight
-                    size={18}
-                    className="shrink-0 text-graphite-300 transition group-hover:translate-x-1 group-hover:text-sky-500"
-                    aria-hidden="true"
-                  />
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
+      <Skeleton
+        variant="text"
+        width={170}
+        height={20}
+      />
     </div>
   );
 }
 
-function ResumenCard({ titulo, cantidad, icon: Icon, color }) {
-  const estilos = {
-    sky: {
-      contenedor: "bg-sky-100 text-sky-600",
-      numero: "text-sky-700",
-    },
-    blue: {
-      contenedor: "bg-blue-100 text-blue-600",
-      numero: "text-blue-700",
-    },
-    red: {
-      contenedor: "bg-red-100 text-red-600",
-      numero: "text-red-700",
-    },
-    green: {
-      contenedor: "bg-moss-100 text-moss-600",
-      numero: "text-moss-700",
-    },
-  };
-
-  const estilo = estilos[color] || estilos.sky;
-
+function FacturaRecienteSkeleton() {
   return (
-    <article className="rounded-2xl border border-graphite-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div
-          className={`flex h-10 w-10 items-center justify-center rounded-xl ${estilo.contenedor}`}
-        >
-          <Icon size={20} aria-hidden="true" />
-        </div>
+    <div className="flex items-center gap-3 border-b border-graphite-200 py-4 last:border-b-0">
+      <Skeleton variant="rounded" width={42} height={42} />
 
-        <span className={`text-2xl font-bold ${estilo.numero}`}>
-          {cantidad}
-        </span>
+      <div className="min-w-0 flex-1">
+        <Skeleton variant="text" width="45%" height={24} />
+        <Skeleton variant="text" width="65%" height={20} />
       </div>
 
-      <p className="mt-4 text-sm font-medium text-graphite-600">
-        {titulo}
-      </p>
-    </article>
+      <div className="hidden sm:block">
+        <Skeleton variant="rounded" width={90} height={26} />
+      </div>
+    </div>
+  );
+}
+
+export default function Dashboard() {
+  const { usuario } = useAuth();
+  const { mostrar } = useToast();
+
+  const [facturas, setFacturas] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+
+  const cargarFacturas = useCallback(async () => {
+    setCargando(true);
+    setError(null);
+
+    try {
+      const datos = await listarFacturas();
+      setFacturas(Array.isArray(datos) ? datos : []);
+    } catch (err) {
+      console.error("Error cargando Dashboard:", err);
+
+      setFacturas([]);
+      setError("No pudimos cargar el resumen de la operación.");
+
+      mostrar(
+        "No se pudieron cargar las facturas.",
+        "error"
+      );
+    } finally {
+      setCargando(false);
+    }
+  }, [mostrar]);
+
+  useEffect(() => {
+    cargarFacturas();
+  }, [cargarFacturas]);
+
+  const rol = usuario?.rol;
+
+  const claves = useMemo(() => {
+    return CLAVES_POR_ROL[rol] || [];
+  }, [rol]);
+
+  const resumen = useMemo(() => {
+    return {
+      RECIBIDA: facturas.filter(
+        (factura) =>
+          factura.estado_factura === "RECIBIDA"
+      ).length,
+
+      EN_REVISION: facturas.filter(
+        (factura) =>
+          factura.estado_factura === "EN_REVISION"
+      ).length,
+
+      ENTREGADA_ADMIN: facturas.filter(
+        (factura) =>
+          factura.estado_factura === "ENTREGADA_ADMIN"
+      ).length,
+
+      FINALIZADA: facturas.filter(
+        (factura) =>
+          factura.estado_factura === "FINALIZADA"
+      ).length,
+
+      NOVEDADES: facturas.reduce(
+        (total, factura) =>
+          total + Number(factura.total_novedades || 0),
+        0
+      ),
+    };
+  }, [facturas]);
+
+  const facturasRecientes = useMemo(() => {
+    return [...facturas]
+      .sort(
+        (a, b) =>
+          obtenerFechaOrden(b.fecha_recepcion) -
+          obtenerFechaOrden(a.fecha_recepcion)
+      )
+      .slice(0, 5);
+  }, [facturas]);
+
+  const acciones = useMemo(() => {
+    return ACCIONES_POR_ROL[rol] || [];
+  }, [rol]);
+
+  const saludo = obtenerSaludo();
+  const nombre = usuario?.nombre || "usuario";
+
+  return (
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:py-8">
+      {/* =====================================================
+          CABECERA
+      ====================================================== */}
+      <header className="mb-7">
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-medium text-sky-700">
+            {rol}
+          </p>
+
+          <h1 className="text-2xl font-semibold tracking-tight text-graphite-900 sm:text-3xl">
+            {saludo}, {nombre}
+          </h1>
+
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-graphite-500 sm:text-base">
+            {obtenerDescripcionRol(rol)}
+          </p>
+        </div>
+      </header>
+
+      {/* =====================================================
+          ERROR GENERAL
+      ====================================================== */}
+      {error && (
+        <section
+          className="mb-7 rounded-xl border border-rust-100 bg-rust-100/50 p-4"
+          role="alert"
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rust-100 text-rust-700">
+                <WarningAmberRoundedIcon />
+              </div>
+
+              <div>
+                <h2 className="font-semibold text-graphite-900">
+                  No pudimos cargar el resumen
+                </h2>
+
+                <p className="mt-1 text-sm text-graphite-700">
+                  Comprueba tu conexión e inténtalo nuevamente.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={cargarFacturas}
+              className="flex min-h-touch shrink-0 items-center justify-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-graphite-900 shadow-sm ring-1 ring-inset ring-graphite-200 transition-colors duration-150 hover:bg-paper-50"
+            >
+              <RefreshRoundedIcon fontSize="small" />
+              Reintentar
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* =====================================================
+          INDICADORES
+      ====================================================== */}
+      <section aria-labelledby="indicadores-heading">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h2
+              id="indicadores-heading"
+              className="text-base font-semibold text-graphite-900"
+            >
+              Estado de la operación
+            </h2>
+
+            <p className="mt-0.5 text-sm text-graphite-500">
+              Resumen actual de las facturas.
+            </p>
+          </div>
+        </div>
+
+        {cargando ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {claves.map((clave) => (
+              <IndicadorSkeleton key={clave} />
+            ))}
+          </div>
+        ) : (
+          <div
+            className={`grid gap-3 ${
+              claves.length === 5
+                ? "sm:grid-cols-2 lg:grid-cols-5"
+                : claves.length === 4
+                  ? "sm:grid-cols-2 lg:grid-cols-4"
+                  : "sm:grid-cols-2"
+            }`}
+          >
+            {claves.map((clave) => {
+              const tarjeta = TARJETAS[clave];
+              const Icon = tarjeta.Icon;
+
+              return (
+                <div
+                  key={clave}
+                  className="rounded-xl border border-graphite-200 bg-white p-4 shadow-sm transition-shadow duration-150 hover:shadow-md"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
+                      <Icon fontSize="small" />
+                    </div>
+
+                    {clave === "NOVEDADES" &&
+                      resumen[clave] > 0 && (
+                        <span className="rounded-full bg-rust-100 px-2 py-1 text-xs font-semibold text-rust-700">
+                          Atención
+                        </span>
+                      )}
+                  </div>
+
+                  <p className="mt-4 text-3xl font-semibold tracking-tight text-graphite-900">
+                    {resumen[clave]}
+                  </p>
+
+                  <p className="mt-1 text-sm font-medium text-graphite-700">
+                    {tarjeta.titulo}
+                  </p>
+
+                  <p className="mt-0.5 text-xs text-graphite-500">
+                    {tarjeta.descripcion}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* =====================================================
+          CONTENIDO PRINCIPAL
+      ====================================================== */}
+      <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.4fr)]">
+        {/* ===================================================
+            ACCIONES RÁPIDAS
+        ==================================================== */}
+        <section aria-labelledby="acciones-heading">
+          <div className="mb-3">
+            <h2
+              id="acciones-heading"
+              className="text-base font-semibold text-graphite-900"
+            >
+              Acciones rápidas
+            </h2>
+
+            <p className="mt-0.5 text-sm text-graphite-500">
+              Accede directamente a las tareas disponibles.
+            </p>
+          </div>
+
+          <div className="grid gap-3">
+            {acciones.map((accion) => {
+              const Icon = accion.Icon;
+
+              return (
+                <Link
+                  key={accion.ruta}
+                  to={accion.ruta}
+                  className={`group flex min-h-touch items-center gap-4 rounded-xl border p-4 transition-all duration-150 ${
+                    accion.primaria
+                      ? "border-sky-600 bg-sky-600 text-white shadow-sm hover:bg-sky-700 hover:shadow-md"
+                      : "border-graphite-200 bg-white text-graphite-900 shadow-sm hover:border-graphite-300 hover:bg-paper-50 hover:shadow-md"
+                  }`}
+                >
+                  <span
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${
+                      accion.primaria
+                        ? "bg-white/15"
+                        : "bg-sky-100 text-sky-700"
+                    }`}
+                  >
+                    <Icon />
+                  </span>
+
+                  <span className="min-w-0 flex-1">
+                    <span
+                      className={`block text-sm font-semibold ${
+                        accion.primaria
+                          ? "text-white"
+                          : "text-graphite-900"
+                      }`}
+                    >
+                      {accion.titulo}
+                    </span>
+
+                    <span
+                      className={`mt-0.5 block text-xs leading-5 ${
+                        accion.primaria
+                          ? "text-white/80"
+                          : "text-graphite-500"
+                      }`}
+                    >
+                      {accion.descripcion}
+                    </span>
+                  </span>
+
+                  <ArrowForwardRoundedIcon
+                    className={`shrink-0 transition-transform duration-150 group-hover:translate-x-0.5 ${
+                      accion.primaria
+                        ? "text-white/80"
+                        : "text-graphite-400"
+                    }`}
+                    fontSize="small"
+                  />
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ===================================================
+            FACTURAS RECIENTES
+        ==================================================== */}
+        <section
+          aria-labelledby="recientes-heading"
+          className="min-w-0 rounded-xl border border-graphite-200 bg-white shadow-sm"
+        >
+          <div className="flex items-center justify-between border-b border-graphite-200 px-4 py-4 sm:px-5">
+            <div>
+              <h2
+                id="recientes-heading"
+                className="text-base font-semibold text-graphite-900"
+              >
+                Facturas recientes
+              </h2>
+
+              <p className="mt-0.5 text-sm text-graphite-500">
+                Últimas facturas registradas.
+              </p>
+            </div>
+
+            {!cargando && facturas.length > 0 && (
+              <Link
+                to="/facturas"
+                className="hidden min-h-touch items-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold text-sky-700 transition-colors duration-150 hover:bg-sky-100 sm:flex"
+              >
+                Ver todas
+                <ArrowForwardRoundedIcon fontSize="small" />
+              </Link>
+            )}
+          </div>
+
+          <div className="px-4 sm:px-5">
+            {cargando ? (
+              <>
+                <FacturaRecienteSkeleton />
+                <FacturaRecienteSkeleton />
+                <FacturaRecienteSkeleton />
+                <FacturaRecienteSkeleton />
+              </>
+            ) : facturasRecientes.length === 0 ? (
+              <div className="flex min-h-48 flex-col items-center justify-center px-4 py-8 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-paper-100 text-graphite-500">
+                  <ReceiptLongRoundedIcon />
+                </div>
+
+                <h3 className="mt-4 text-sm font-semibold text-graphite-900">
+                  No hay facturas para mostrar
+                </h3>
+
+                <p className="mt-1 max-w-sm text-sm leading-5 text-graphite-500">
+                  Las facturas registradas aparecerán aquí.
+                </p>
+
+                {["BODEGA", "ADMINISTRADOR"].includes(rol) && (
+                  <Link
+                    to="/nueva-recepcion"
+                    className="mt-4 flex min-h-touch items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-sky-700"
+                  >
+                    <AddBoxRoundedIcon fontSize="small" />
+                    Nueva recepción
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <>
+                {facturasRecientes.map((factura) => (
+                  <Link
+                    key={factura.id}
+                    to={`/facturas/${factura.id}`}
+                    className="group flex min-h-touch items-center gap-3 border-b border-graphite-200 py-4 last:border-b-0"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-paper-100 text-graphite-500 transition-colors duration-150 group-hover:bg-sky-100 group-hover:text-sky-700">
+                      <ReceiptLongRoundedIcon fontSize="small" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-graphite-900">
+                        {factura.numero_factura ||
+                          "Factura sin número"}
+                      </p>
+
+                      <p className="mt-0.5 truncate text-xs text-graphite-500">
+                        {factura.proveedor ||
+                          "Proveedor no disponible"}
+                      </p>
+
+                      <div className="mt-1 flex items-center gap-1 text-xs text-graphite-500">
+                        <CalendarTodayRoundedIcon
+                          sx={{ fontSize: 13 }}
+                        />
+
+                        <span>
+                          {formatearFecha(
+                            factura.fecha_recepcion
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="hidden shrink-0 sm:block">
+                      <StatusBadge
+                        estado={factura.estado_factura}
+                      />
+                    </div>
+
+                    <ArrowForwardRoundedIcon
+                      fontSize="small"
+                      className="shrink-0 text-graphite-300 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-sky-600"
+                    />
+                  </Link>
+                ))}
+
+                <div className="border-t border-graphite-200 py-3 sm:hidden">
+                  <Link
+                    to="/facturas"
+                    className="flex min-h-touch items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-sky-700 transition-colors duration-150 hover:bg-sky-100"
+                  >
+                    Ver todas las facturas
+                    <ArrowForwardRoundedIcon fontSize="small" />
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
   );
 }

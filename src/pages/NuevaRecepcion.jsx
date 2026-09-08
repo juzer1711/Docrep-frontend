@@ -5,7 +5,6 @@ import CameraInput from "../components/CameraInput.jsx";
 import SignatureModal from "../components/SignatureModal.jsx";
 import { crearFactura } from "../api/facturasApi.js";
 import { useToast } from "../components/ToastProvider.jsx";
-import { useAuth } from "../context/AuthContext.jsx";
 
 // TODO integración de auth: hoy se toma de un valor fijo de sesión local.
 // Cuando exista login, reemplazar por el id del usuario autenticado.
@@ -13,7 +12,6 @@ import { useAuth } from "../context/AuthContext.jsx";
 export default function NuevaRecepcion() {
   const navigate = useNavigate();
   const { mostrar } = useToast();
-  const { usuario } = useAuth();
 
   const [numeroFactura, setNumeroFactura] = useState("");
   const [proveedor, setProveedor] = useState("");
@@ -34,7 +32,6 @@ export default function NuevaRecepcion() {
       const resultado = await crearFactura({
         numero_factura: numeroFactura.trim(),
         proveedor: proveedor.trim(),
-        id_usuario: usuario.ID_USUARIO ?? usuario.id_usuario,
         firma_base64: firma,
         foto
       });

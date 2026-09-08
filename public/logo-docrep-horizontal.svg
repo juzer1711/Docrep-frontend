@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 110" width="100%" height="100%">
+  <defs>
+    <linearGradient id="boxTopH" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#1D4ED8" />
+    </linearGradient>
+    <linearGradient id="boxLeftH" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E40AF" />
+      <stop offset="100%" stop-color="#1E3A8A" />
+    </linearGradient>
+    <linearGradient id="checkH" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <filter id="shadowH" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#0F172A" flood-opacity="0.12" />
+    </filter>
+  </defs>
+
+  <!-- Isotipo Escalado -->
+  <g filter="url(#shadowH)" transform="translate(10, -5) scale(0.32)">
+    <path d="M160 80 L250 125 L160 170 L70 125 Z" fill="url(#boxTopH)" />
+    <path d="M160 80 L205 102.5 L115 147.5 L70 125 Z" fill="#3B82F6" opacity="0.4" />
+    <path d="M70 125 L160 170 L160 270 L70 225 Z" fill="url(#boxLeftH)" />
+    <path d="M160 170 L250 125 L250 225 L160 270 Z" fill="#0D9488" opacity="0.2" />
+    <path d="M130 200 L170 240 L270 130 L240 100 L170 180 L145 155 Z" fill="url(#checkH)" />
+  </g>
+
+  <!-- Tipografía de Marca -->
+  <text x="120" y="62" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="44" fill="#0F172A" letter-spacing="0.5">
+    DOC<tspan fill="#10B981">REP</tspan>
+  </text>
+  <text x="122" y="82" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="12" fill="#64748B" letter-spacing="3">
+    GESTIÓN BODEGA
+  </text>
+</svg>

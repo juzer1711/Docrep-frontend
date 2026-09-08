@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import CameraInput from "./CameraInput.jsx";
 
-const TIPOS = ["AVERIADO", "INCOMPLETO", "SOBRANTE", "INCORRECTO"];
+const TIPOS = ["AVERIADO", "INCOMPLETO", "EXCEDENTE"];
 
 const ESTADO_INICIAL = {
   codigo_referencia: "",
@@ -12,9 +12,13 @@ const ESTADO_INICIAL = {
   observaciones: ""
 };
 
-export default function NovedadModal({ abierto, onCerrar, onGuardar, guardando }) {
+export default function NovedadModal({ abierto, onCerrar, onGuardar, guardando, novedad = null }) {
   const [form, setForm] = useState(ESTADO_INICIAL);
   const [foto, setFoto] = useState(null);
+
+  useEffect(() => {
+    if (abierto) setForm(novedad ? { codigo_referencia: novedad.codigo_referencia || "", descripcion_producto: novedad.descripcion_producto || "", tipo_novedad: novedad.tipo_novedad || TIPOS[0], cantidad: novedad.cantidad || "", observaciones: novedad.observaciones || "" } : ESTADO_INICIAL);
+  }, [abierto, novedad]);
 
   if (!abierto) return null;
 
@@ -31,7 +35,7 @@ export default function NovedadModal({ abierto, onCerrar, onGuardar, guardando }
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-graphite-900/60 sm:items-center">
       <div className="flex max-h-[90vh] w-full flex-col overflow-y-auto rounded-t-2xl bg-white sm:w-[520px] sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-graphite-200 px-5 py-4">
-          <h2 className="text-lg font-semibold">Registrar novedad</h2>
+          <h2 className="text-lg font-semibold">{novedad ? "Editar novedad" : "Registrar novedad"}</h2>
           <button onClick={onCerrar} aria-label="Cerrar" className="flex min-h-touch min-w-touch items-center justify-center">
             <X size={22} />
           </button>

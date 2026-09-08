@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="emptyBox" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#94A3B8" />
+      <stop offset="100%" stop-color="#64748B" />
+    </linearGradient>
+    <linearGradient id="emptyInside" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#CBD5E1" />
+      <stop offset="100%" stop-color="#94A3B8" />
+    </linearGradient>
+  </defs>
+
+  <rect width="300" height="300" rx="40" fill="#F8FAFC" />
+
+  <!-- Sombra en el piso -->
+  <ellipse cx="150" cy="235" rx="80" ry="14" fill="#E2E8F0" />
+
+  <!-- Caja Abierta y Vacía -->
+  <g transform="translate(0, -10)">
+    <!-- Pared Trasera Interior -->
+    <path d="M80 130 L150 100 L220 130 L150 160 Z" fill="url(#emptyInside)" />
+    <!-- Pared Izquierda -->
+    <path d="M80 130 L150 160 L150 220 L80 190 Z" fill="url(#emptyBox)" />
+    <!-- Pared Derecha -->
+    <path d="M150 160 L220 130 L220 190 L150 220 Z" fill="#475569" />
+    
+    <!-- Solapas Abiertas -->
+    <path d="M80 130 L50 95 L120 70 L150 100 Z" fill="#CBD5E1" />
+    <path d="M220 130 L250 95 L180 70 L150 100 Z" fill="#94A3B8" />
+  </g>
+
+  <!-- Lupa Volando / Escaneando -->
+  <g transform="translate(170, 70)">
+    <circle cx="30" cy="30" r="22" stroke="#2563EB" stroke-width="6" fill="#EFF6FF" opacity="0.9"/>
+    <line x1="46" y1="46" x2="64" y2="64" stroke="#2563EB" stroke-width="7" stroke-linecap="round" />
+  </g>
+</svg>
